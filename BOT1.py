@@ -256,7 +256,7 @@ async def verificar_punicoes():
 
 @bot.event
 async def on_ready():
-    verificar_punicoes.start()
+    if not verificar_punicoes.is_running():
+        verificar_punicoes.start()
     await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-
 bot.run(TOKEN)
