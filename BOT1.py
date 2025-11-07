@@ -25,6 +25,9 @@ intents.guilds = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 GUILD_OBJ = discord.Object(id=GUILD_ID)
 
+verificar_punicoes_loop_started = False  # Proteção para não rodar múltiplas vezes
+
+
 def calcular_tempo_faltando(data_registro, duracao_str):
     duracao = timedelta()
     for valor, unidade in re.findall(r"(\d+)([dhm])", duracao_str.lower()):
@@ -38,6 +41,7 @@ def calcular_tempo_faltando(data_registro, duracao_str):
     agora = datetime.now()
     restante = fim - agora
     return restante
+
 
 async def verificar_registro_ativo(guild, nick):
     canal = guild.get_channel(CANAL_REGISTRO_ID)
@@ -56,6 +60,7 @@ async def verificar_registro_ativo(guild, nick):
                     except:
                         pass
     return False
+
 
 @bot.tree.command(name="registro", description="Registrar uma punição", guild=discord.Object(id=GUILD_ID))
 @app_commands.describe(
@@ -111,6 +116,7 @@ async def registro(
     await canal.send(embed=embed)
     await interaction.response.send_message("✅ Registro de punição enviado com sucesso.", ephemeral=True)
 
+
 @bot.tree.command(name="anular", description="Anula um registro de punição por nick", guild=discord.Object(id=GUILD_ID))
 async def anular(interaction: discord.Interaction, nick: str):
     if interaction.user.id not in WHITELIST_IDS:
@@ -131,6 +137,7 @@ async def anular(interaction: discord.Interaction, nick: str):
                     await interaction.response.send_message(f"O registro de `{nick}` foi anulado.", ephemeral=True)
                     return
     await interaction.response.send_message("Nenhum registro encontrado com esse nick.", ephemeral=True)
+
 
 @bot.tree.command(name="resultados", description="Anunciar aprovados da staff", guild=discord.Object(id=GUILD_ID))
 async def resultados(interaction: discord.Interaction, ids: str):
@@ -154,6 +161,7 @@ async def resultados(interaction: discord.Interaction, ids: str):
     await canal.send(embed=embed)
     await interaction.response.send_message("Resultados enviados.", ephemeral=True)
 
+
 @bot.tree.command(name="postar_edital", description="Postar o edital da staff", guild=discord.Object(id=GUILD_ID))
 async def postar_edital(interaction: discord.Interaction, link: str):
     if interaction.user.id not in WHITELIST_IDS:
@@ -173,6 +181,7 @@ async def postar_edital(interaction: discord.Interaction, link: str):
     )
     await canal.send(texto)
     await interaction.response.send_message("Edital postado com sucesso.", ephemeral=True)
+
 
 @bot.tree.command(name="conferir", description="Verifica punições por nick", guild=discord.Object(id=GUILD_ID))
 async def conferir(interaction: discord.Interaction, nick: str):
@@ -211,6 +220,7 @@ async def conferir(interaction: discord.Interaction, nick: str):
                         return
     await interaction.response.send_message("Nenhum registro encontrado com esse nick.", ephemeral=True)
 
+
 @bot.tree.command(name="perguntar", description="Abrir perguntas frequentes", guild=discord.Object(id=GUILD_ID))
 async def perguntar(interaction: discord.Interaction):
     perguntas = {
@@ -229,6 +239,7 @@ async def perguntar(interaction: discord.Interaction):
     view = View()
     view.add_item(select)
     await interaction.response.send_message("Escolha uma pergunta abaixo:", view=view, ephemeral=True)
+
 
 @tasks.loop(minutes=5)
 async def verificar_punicoes():
@@ -251,9 +262,14 @@ async def verificar_punicoes():
                 except:
                     continue
 
+
 @bot.event
 async def on_ready():
-    verificar_punicoes.start()
+    global verificar_punicoes_loop_started
+    if not verificar_punicoes_loop_started:
+        verificar_punicoes.start()
+        verificar_punicoes_loop_started = True
     await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
+
 
 bot.run(TOKEN)
