@@ -45,20 +45,28 @@ def calcular_tempo_faltando(data_registro, duracao_str):
 
 async def verificar_registro_ativo(guild, nick):
     canal = guild.get_channel(CANAL_REGISTRO_ID)
+    print(f"🔍 Verificando registros ativos para: {nick}")
     async for msg in canal.history(limit=200):
         if msg.embeds:
             embed = msg.embeds[0]
+            print(f"📦 Embed encontrado: {embed.title}")
             if embed.title.startswith("Registro de Punição"):
                 campos = {f.name: f.value for f in embed.fields}
-                if campos.get("Nick do Player", "").lower() == nick.lower():
+                print(f"📋 Campos do embed: {campos}")
+                nick_registrado = campos.get("Nick do Player", "").strip().lower()
+                if nick_registrado == nick.strip().lower():
                     data_str = embed.footer.text.replace("Registrado em: ", "")
+                    print(f"🕒 Data do registro: {data_str}")
                     try:
                         data_registro = datetime.strptime(data_str, "%Y-%m-%d %H:%M:%S")
                         restante = calcular_tempo_faltando(data_registro, campos.get("Punição", ""))
+                        print(f"⏳ Tempo restante: {restante}")
                         if restante.total_seconds() > 0:
+                            print("⚠️ Punição ainda ativa.")
                             return True
-                    except:
-                        pass
+                    except Exception as e:
+                        print(f"❌ Erro ao processar registro: {e}")
+    print("✅ Nenhuma punição ativa encontrada.")
     return False
 
 @bot.tree.command(name="registro", description="Registrar uma punição", guild=discord.Object(id=GUILD_ID))
