@@ -29,15 +29,24 @@ synced = False
 
 def calcular_tempo_faltando(data_registro, duracao_str):
     duracao = timedelta()
-    for valor, unidade in re.findall(r"(\d+)([dhms])", duracao_str.lower()):
-        if unidade == "d":
-            duracao += timedelta(days=int(valor))
-        elif unidade == "h":
-            duracao += timedelta(hours=int(valor))
-        elif unidade == "m":
-            duracao += timedelta(minutes=int(valor))
-        elif unidade == "s":
-            duracao += timedelta(seconds=int(valor))
+    matches = re.findall(r"(\d+)([dhms])", duracao_str.lower())
+
+    if not matches:
+        try:
+            duracao += timedelta(minutes=int(duracao_str))
+        except:
+            pass
+    else:
+        for valor, unidade in matches:
+            if unidade == "d":
+                duracao += timedelta(days=int(valor))
+            elif unidade == "h":
+                duracao += timedelta(hours=int(valor))
+            elif unidade == "m":
+                duracao += timedelta(minutes=int(valor))
+            elif unidade == "s":
+                duracao += timedelta(seconds=int(valor))
+
     fim = data_registro + duracao
     agora = datetime.now()
     restante = fim - agora
