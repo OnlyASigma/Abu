@@ -25,6 +25,7 @@ intents.guilds = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 GUILD_OBJ = discord.Object(id=GUILD_ID)
 processed_messages = set()
+synced = False
 
 def calcular_tempo_faltando(data_registro, duracao_str):
     duracao = timedelta()
@@ -140,7 +141,7 @@ async def resultados(interaction: discord.Interaction, ids: str):
     mencoes = []
     for user_id in id_list:
         try:
-            mencoes.append(f"<@{int(user_id)}>") 
+            mencoes.append(f"<@{int(user_id)}>")
         except:
             mencoes.append(f"`ID inválido: {user_id}`")
     embed = discord.Embed(title="Resultado do Formulário da Staff", color=discord.Color.green())
@@ -177,7 +178,7 @@ async def conferir(interaction: discord.Interaction, nick: str):
     if not canal:
         await interaction.response.send_message("Canal de registro não encontrado.", ephemeral=True)
         return
-    async for message in canal.history(limit=100):
+            async for message in canal.history(limit=100):
         if message.embeds:
             embed = message.embeds[0]
             if embed.title.startswith("Registro de Punição"):
@@ -223,8 +224,10 @@ async def perguntar(interaction: discord.Interaction):
     }
     options = [discord.SelectOption(label=p, description="Clique para ver a resposta") for p in perguntas]
     select = Select(placeholder="Escolha uma pergunta...", options=options)
+
     async def select_callback(interaction_select: discord.Interaction):
         await interaction_select.response.send_message(perguntas[select.values[0]], ephemeral=True)
+
     select.callback = select_callback
     view = View()
     view.add_item(select)
@@ -256,7 +259,15 @@ async def verificar_punicoes():
 
 @bot.event
 async def on_ready():
+    global synced
+    print(f"{bot.user} está online!")
+
     if not verificar_punicoes.is_running():
         verificar_punicoes.start()
-    await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
+
+    if not synced:
+        bot.tree.clear_commands(guild=discord.Object(id=GUILD_ID))
+        await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
+        synced = True
+
 bot.run(TOKEN)
