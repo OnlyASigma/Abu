@@ -16,10 +16,9 @@ tree = bot.tree
 
 @bot.event
 async def on_ready():
-    await bot.wait_until_ready()
     guild = discord.Object(id=GUILD_ID)
-    synced = await tree.sync(guild=guild)
-    print(f"{len(synced)} comandos sincronizados com o servidor {GUILD_ID}")
+    await tree.sync(guild=guild)
+    print(f"Comandos sincronizados na guild {GUILD_ID}")
     print(f"Bot conectado como {bot.user}")
 
 @tree.command(name="ping", description="Mostra o ping do bot")
