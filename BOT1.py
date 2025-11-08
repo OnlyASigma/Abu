@@ -15,17 +15,12 @@ tree = bot.tree
 
 @bot.event
 async def on_ready():
-    await tree.sync(guild=discord.Object(id=GUILD_ID))
-    print(f"Bot online como {bot.user}")
-
-@bot.event
-async def on_ready():
-    print(f"Bot conectado como {bot.user}")
     try:
-        synced = await bot.tree.sync()
+        synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
         print(f"{len(synced)} comandos sincronizados com o Discord.")
     except Exception as e:
         print(e)
+    print(f"Bot online como {bot.user}")
 
 def has_role(interaction, role_name):
     return discord.utils.get(interaction.user.roles, name=role_name) is not None
@@ -42,6 +37,12 @@ async def registro(interaction: discord.Interaction, nick: str, motivo: str, pun
     if not has_role(interaction, "Punições"):
         await interaction.response.send_message("❌ Você não tem permissão para usar este comando.", ephemeral=True)
         return
+    
+    canal_punicoes = discord.utils.get(interaction.guild.text_channels, name="punições")
+    if not canal_punicoes:
+        await interaction.response.send_message("❌ Canal `punições` não encontrado!", ephemeral=True)
+        return
+
     embed = discord.Embed(title="Registro de Punição", color=discord.Color.red())
     embed.add_field(name="Nick", value=nick, inline=True)
     embed.add_field(name="Motivo", value=motivo, inline=True)
@@ -52,7 +53,24 @@ async def registro(interaction: discord.Interaction, nick: str, motivo: str, pun
         embed.add_field(name="Provas (arquivo)", value=provas_arquivo.url, inline=False)
     else:
         embed.add_field(name="Provas", value="Nenhuma enviada.", inline=False)
-    await interaction.response.send_message(embed=embed)
+    
+    await canal_punicoes.send(embed=embed)
+    await interaction.response.send_message("✅ Punição registrada com sucesso!", ephemeral=True)
+
+@tree.command(name="anular", description="Anular uma punição registrada", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(nick="Nick do jogador punido")
+async def anular(interaction: discord.Interaction, nick: str):
+    if not has_role(interaction, "Punições"):
+        await interaction.response.send_message("❌ Você não tem permissão para usar este comando.", ephemeral=True)
+        return
+    
+    canal_punicoes = discord.utils.get(interaction.guild.text_channels, name="punições")
+    if not canal_punicoes:
+        await interaction.response.send_message("❌ Canal `punições` não encontrado!", ephemeral=True)
+        return
+    
+    await canal_punicoes.send(f"⚠️ A punição de **{nick}** foi anulada.")
+    await interaction.response.send_message("✅ Punição anulada com sucesso!", ephemeral=True)
 
 @tree.command(name="resultado", description="Postar resultado da whitelist", guild=discord.Object(id=GUILD_ID))
 @app_commands.describe(texto="Mensagem do resultado")
@@ -60,7 +78,14 @@ async def resultado(interaction: discord.Interaction, texto: str):
     if not has_role(interaction, "Whitelist"):
         await interaction.response.send_message("❌ Você não tem permissão para usar este comando.", ephemeral=True)
         return
-    await interaction.response.send_message(f"📝 Resultado: {texto}")
+    
+    canal_edital = discord.utils.get(interaction.guild.text_channels, name="edital-staff")
+    if not canal_edital:
+        await interaction.response.send_message("❌ Canal `edital-staff` não encontrado!", ephemeral=True)
+        return
+
+    await canal_edital.send(f"📝 Resultado da Whitelist:\n{texto}")
+    await interaction.response.send_message("✅ Resultado postado no canal **edital-staff**.", ephemeral=True)
 
 @tree.command(name="postar_edital", description="Postar edital da whitelist", guild=discord.Object(id=GUILD_ID))
 @app_commands.describe(texto="Conteúdo do edital")
@@ -68,35 +93,14 @@ async def postar_edital(interaction: discord.Interaction, texto: str):
     if not has_role(interaction, "Whitelist"):
         await interaction.response.send_message("❌ Você não tem permissão para usar este comando.", ephemeral=True)
         return
-    await interaction.response.send_message(f"📜 Edital: {texto}")
+    
+    canal_edital = discord.utils.get(interaction.guild.text_channels, name="edital-staff")
+    if not canal_edital:
+        await interaction.response.send_message("❌ Canal `edital-staff` não encontrado!", ephemeral=True)
+        return
 
-@tree.command(name="conferir", description="Conferir punições registradas", guild=discord.Object(id=GUILD_ID))
-@app_commands.describe(nick="Nick do jogador")
-async def conferir(interaction: discord.Interaction, nick: str):
-    embed = discord.Embed(title="Consulta de Punições", color=discord.Color.blue())
-    embed.add_field(name="Nick", value=nick, inline=True)
-    embed.add_field(name="Status", value="Sem punições registradas", inline=True)
-    await interaction.response.send_message(embed=embed)
-
-@tree.command(name="anular", description="Anular uma punição registrada", guild=discord.Object(id=GUILD_ID))
-@app_commands.describe(nick="Nick do jogador punido")
-async def anular(interaction: discord.Interaction, nick: str):
-    await interaction.response.send_message(f"Punição de {nick} anulada com sucesso.")
-
-@tree.command(name="ajuda", description="Mostrar ajuda sobre os comandos", guild=discord.Object(id=GUILD_ID))
-async def ajuda(interaction: discord.Interaction):
-    embed = discord.Embed(
-        title="Comandos disponíveis",
-        description="Veja abaixo os comandos que você pode usar com o bot Sigma:",
-        color=discord.Color.green()
-    )
-    embed.add_field(name="/registro", value="Registra uma punição (cargo Punições).", inline=False)
-    embed.add_field(name="/conferir", value="Consulta se um jogador tem punições registradas.", inline=False)
-    embed.add_field(name="/anular", value="Remove uma punição registrada.", inline=False)
-    embed.add_field(name="/resultado", value="Posta resultado da whitelist (cargo Whitelist).", inline=False)
-    embed.add_field(name="/postar_edital", value="Posta o edital da whitelist (cargo Whitelist).", inline=False)
-    embed.add_field(name="/ping", value="Testa se o bot está online e respondendo.", inline=False)
-    await interaction.response.send_message(embed=embed)
+    await canal_edital.send(f"📜 Edital da Whitelist:\n{texto}")
+    await interaction.response.send_message("✅ Edital postado no canal **edital-staff**.", ephemeral=True)
 
 @tree.command(name="ping", description="Testa se o bot está respondendo", guild=discord.Object(id=GUILD_ID))
 async def ping(interaction: discord.Interaction):
