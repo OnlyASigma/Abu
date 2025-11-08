@@ -1,4 +1,5 @@
 import discord
+from discord.ext import commands
 from discord import app_commands
 import os
 from dotenv import load_dotenv
@@ -9,10 +10,13 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 GUILD_ID = int(os.getenv("GUILD_ID"))
 
 intents = discord.Intents.default()
-bot = discord.Client(intents=intents)
-tree = app_commands.CommandTree(bot)
+bot = commands.Bot(command_prefix="!", intents=intents)
+tree = bot.tree
 
-synced = False
+@bot.event
+async def on_ready():
+    await tree.sync(guild=discord.Object(id=GUILD_ID))
+    print(f"Bot online como {bot.user}")
 
 @bot.event
 async def on_ready():
