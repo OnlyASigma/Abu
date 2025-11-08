@@ -15,8 +15,9 @@ tree = app_commands.CommandTree(bot)
 @bot.event
 async def on_ready():
     try:
-        synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-        print(f"{len(synced)} comandos sincronizados com o servidor.")
+        guild = discord.Object(id=GUILD_ID)
+        synced = await bot.tree.sync(guild=guild)
+        print(f"{len(synced)} comandos sincronizados com o servidor {GUILD_ID}")
     except Exception as e:
         print(f"Erro ao sincronizar comandos: {e}")
     print(f"Bot conectado como {bot.user}")
