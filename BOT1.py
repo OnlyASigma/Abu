@@ -15,11 +15,11 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 guild = discord.Object(id=GUILD_ID)
 
-@tree.command(name="ping", description="Mostra o ping do bot")
+@tree.command(name="ping", description="Mostra o ping do bot", guild=guild)
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message(f"Pong! 🏓 {round(bot.latency * 1000)}ms")
 
-@tree.command(name="postar_edital", description="Posta o edital com o link do formulário")
+@tree.command(name="postar_edital", description="Posta o edital com o link do formulário", guild=guild)
 @app_commands.describe(link="Link do formulário")
 async def postar_edital(interaction: discord.Interaction, link: str):
     canal = discord.utils.get(interaction.guild.text_channels, name="edital-staff")
@@ -43,7 +43,7 @@ async def postar_edital(interaction: discord.Interaction, link: str):
     await canal.send(texto)
     await interaction.response.send_message("✅ Edital postado com sucesso!", ephemeral=True)
 
-@tree.command(name="resultado", description="Envia o resultado no canal edital-staff")
+@tree.command(name="resultado", description="Envia o resultado no canal edital-staff", guild=guild)
 async def resultado(interaction: discord.Interaction):
     canal = discord.utils.get(interaction.guild.text_channels, name="edital-staff")
     if canal:
@@ -52,7 +52,7 @@ async def resultado(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("❌ Canal 'edital-staff' não encontrado.", ephemeral=True)
 
-@tree.command(name="registro", description="Envia um registro no canal punições")
+@tree.command(name="registro", description="Envia um registro no canal punições", guild=guild)
 async def registro(interaction: discord.Interaction):
     canal = discord.utils.get(interaction.guild.text_channels, name="punições")
     if canal:
@@ -61,7 +61,7 @@ async def registro(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("❌ Canal 'punições' não encontrado.", ephemeral=True)
 
-@tree.command(name="anular", description="Envia uma anulação no canal punições")
+@tree.command(name="anular", description="Envia uma anulação no canal punições", guild=guild)
 async def anular(interaction: discord.Interaction):
     canal = discord.utils.get(interaction.guild.text_channels, name="punições")
     if canal:
@@ -72,8 +72,8 @@ async def anular(interaction: discord.Interaction):
 
 @bot.event
 async def on_ready():
-    await tree.sync(guild=guild)
-    print(f"Comandos sincronizados na guild {GUILD_ID}")
+    synced = await tree.sync(guild=guild)
+    print(f"✅ {len(synced)} comandos sincronizados na guild {GUILD_ID}")
     print(f"Bot conectado como {bot.user}")
 
 bot.run(TOKEN)
