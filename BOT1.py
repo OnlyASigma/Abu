@@ -13,13 +13,7 @@ intents = discord.Intents.default()
 intents.guilds = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
-
-@bot.event
-async def on_ready():
-    guild = discord.Object(id=GUILD_ID)
-    await tree.sync(guild=guild)
-    print(f"Comandos sincronizados na guild {GUILD_ID}")
-    print(f"Bot conectado como {bot.user}")
+guild = discord.Object(id=GUILD_ID)
 
 @tree.command(name="ping", description="Mostra o ping do bot")
 async def ping(interaction: discord.Interaction):
@@ -75,5 +69,11 @@ async def anular(interaction: discord.Interaction):
         await interaction.response.send_message("✅ Anulação enviada!", ephemeral=True)
     else:
         await interaction.response.send_message("❌ Canal 'punições' não encontrado.", ephemeral=True)
+
+@bot.event
+async def on_ready():
+    await tree.sync(guild=guild)
+    print(f"Comandos sincronizados na guild {GUILD_ID}")
+    print(f"Bot conectado como {bot.user}")
 
 bot.run(TOKEN)
