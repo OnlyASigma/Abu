@@ -16,11 +16,12 @@ synced = False
 
 @bot.event
 async def on_ready():
-    global synced
-    print(f"{bot.user} está online!")
-    if not synced:
-        await tree.sync(guild=discord.Object(id=GUILD_ID))
-        synced = True
+    print(f"Bot conectado como {bot.user}")
+    try:
+        synced = await bot.tree.sync()
+        print(f"{len(synced)} comandos sincronizados com o Discord.")
+    except Exception as e:
+        print(e)
 
 def has_role(interaction, role_name):
     return discord.utils.get(interaction.user.roles, name=role_name) is not None
