@@ -14,8 +14,12 @@ tree = app_commands.CommandTree(bot)
 
 @bot.event
 async def on_ready():
-    await tree.sync(guild=discord.Object(id=GUILD_ID))
-    print(f"✅ Bot conectado como {bot.user}")
+    try:
+        synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
+        print(f"{len(synced)} comandos sincronizados com o servidor.")
+    except Exception as e:
+        print(f"Erro ao sincronizar comandos: {e}")
+    print(f"Bot conectado como {bot.user}")
 
 @tree.command(name="ping", description="Mostra o ping do bot")
 async def ping(interaction: discord.Interaction):
