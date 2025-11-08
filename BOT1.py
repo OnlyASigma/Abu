@@ -18,10 +18,12 @@ synced = False
 async def on_ready():
     global synced
     print(f"{bot.user} está online!")
-
     if not synced:
         await tree.sync(guild=discord.Object(id=GUILD_ID))
         synced = True
+
+def has_role(interaction, role_name):
+    return discord.utils.get(interaction.user.roles, name=role_name) is not None
 
 @tree.command(name="registro", description="Registrar uma punição", guild=discord.Object(id=GUILD_ID))
 @app_commands.describe(
@@ -32,15 +34,36 @@ async def on_ready():
     provas_arquivo="Upload de provas (opcional)"
 )
 async def registro(interaction: discord.Interaction, nick: str, motivo: str, punicao: str, provas_link: str = None, provas_arquivo: discord.Attachment = None):
+    if not has_role(interaction, "Punições"):
+        await interaction.response.send_message("❌ Você não tem permissão para usar este comando.", ephemeral=True)
+        return
     embed = discord.Embed(title="Registro de Punição", color=discord.Color.red())
     embed.add_field(name="Nick", value=nick, inline=True)
     embed.add_field(name="Motivo", value=motivo, inline=True)
     embed.add_field(name="Punição", value=punicao, inline=True)
     if provas_link:
         embed.add_field(name="Provas (link)", value=provas_link, inline=False)
-    if provas_arquivo:
-        embed.set_image(url=provas_arquivo.url)
+    elif provas_arquivo:
+        embed.add_field(name="Provas (arquivo)", value=provas_arquivo.url, inline=False)
+    else:
+        embed.add_field(name="Provas", value="Nenhuma enviada.", inline=False)
     await interaction.response.send_message(embed=embed)
+
+@tree.command(name="resultado", description="Postar resultado da whitelist", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(texto="Mensagem do resultado")
+async def resultado(interaction: discord.Interaction, texto: str):
+    if not has_role(interaction, "Whitelist"):
+        await interaction.response.send_message("❌ Você não tem permissão para usar este comando.", ephemeral=True)
+        return
+    await interaction.response.send_message(f"📝 Resultado: {texto}")
+
+@tree.command(name="postar_edital", description="Postar edital da whitelist", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(texto="Conteúdo do edital")
+async def postar_edital(interaction: discord.Interaction, texto: str):
+    if not has_role(interaction, "Whitelist"):
+        await interaction.response.send_message("❌ Você não tem permissão para usar este comando.", ephemeral=True)
+        return
+    await interaction.response.send_message(f"📜 Edital: {texto}")
 
 @tree.command(name="conferir", description="Conferir punições registradas", guild=discord.Object(id=GUILD_ID))
 @app_commands.describe(nick="Nick do jogador")
@@ -62,9 +85,11 @@ async def ajuda(interaction: discord.Interaction):
         description="Veja abaixo os comandos que você pode usar com o bot Sigma:",
         color=discord.Color.green()
     )
-    embed.add_field(name="/registro", value="Registra uma punição com nick, motivo, tempo e provas.", inline=False)
+    embed.add_field(name="/registro", value="Registra uma punição (cargo Punições).", inline=False)
     embed.add_field(name="/conferir", value="Consulta se um jogador tem punições registradas.", inline=False)
-    embed.add_field(name="/anular", value="Remove uma punição registrada de um jogador.", inline=False)
+    embed.add_field(name="/anular", value="Remove uma punição registrada.", inline=False)
+    embed.add_field(name="/resultado", value="Posta resultado da whitelist (cargo Whitelist).", inline=False)
+    embed.add_field(name="/postar_edital", value="Posta o edital da whitelist (cargo Whitelist).", inline=False)
     embed.add_field(name="/ping", value="Testa se o bot está online e respondendo.", inline=False)
     await interaction.response.send_message(embed=embed)
 
