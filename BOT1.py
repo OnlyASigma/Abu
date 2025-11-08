@@ -10,17 +10,16 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 GUILD_ID = int(os.getenv("GUILD_ID"))
 
 intents = discord.Intents.default()
+intents.guilds = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
 @bot.event
 async def on_ready():
-    try:
-        guild = discord.Object(id=GUILD_ID)
-        synced = await tree.sync(guild=guild)
-        print(f"{len(synced)} comandos sincronizados com o servidor {GUILD_ID}")
-    except Exception as e:
-        print(f"Erro ao sincronizar comandos: {e}")
+    await bot.wait_until_ready()
+    guild = discord.Object(id=GUILD_ID)
+    synced = await tree.sync(guild=guild)
+    print(f"{len(synced)} comandos sincronizados com o servidor {GUILD_ID}")
     print(f"Bot conectado como {bot.user}")
 
 @tree.command(name="ping", description="Mostra o ping do bot")
