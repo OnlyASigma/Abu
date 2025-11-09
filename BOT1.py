@@ -100,6 +100,9 @@ async def registro(
     if not canal:
         await interaction.followup.send("❌ Canal 'punições' não encontrado.", ephemeral=True)
         return
+    if any(datetime.utcnow() < p["hora_final"] and p["player"] == player for p in punicoes_ativas):
+        await interaction.followup.send(f"❌ O player {player} já possui uma punição ativa.", ephemeral=True)
+        return
 
     embed = discord.Embed(title="📋 Punição Aplicada", color=discord.Color.red())
     embed.add_field(name="Responsável", value=staff, inline=False)
@@ -107,12 +110,14 @@ async def registro(
     embed.add_field(name="Motivo", value=motivo, inline=False)
     embed.add_field(name="Tempo", value=f"{tempo} minutos", inline=False)
 
-    if provas_link:
-        embed.add_field(name="Provas", value=provas_link, inline=False)
-
     file = None
     if provas_arquivo:
         file = await provas_arquivo.to_file()
+
+    if provas_link:
+        embed.add_field(name="Provas (Link)", value=provas_link, inline=False)
+    if file:
+        embed.add_field(name="Provas (Arquivo enviado)", value=file.filename, inline=False)
 
     success, msg, err = await try_send(canal, embed=embed, file=file)
     if success:
@@ -153,12 +158,13 @@ async def conferir(interaction: discord.Interaction, player: str):
     if not p:
         await interaction.followup.send("❌ Nenhuma punição encontrada para este player.", ephemeral=True)
         return
-    embed = discord.Embed(title="Consulta de Punição", color=discord.Color.orange())
+    cor = discord.Color.red() if datetime.utcnow() < p["hora_final"] else discord.Color.orange()
+    status = "Ativa" if datetime.utcnow() < p["hora_final"] else "Expirada"
+    embed = discord.Embed(title="Consulta de Punição", color=cor)
     embed.add_field(name="Player", value=p["player"], inline=False)
     embed.add_field(name="Responsável", value=p["staff"], inline=False)
     embed.add_field(name="Motivo", value=p["motivo"], inline=False)
     embed.add_field(name="Tempo", value=f"{p['tempo']} minutos", inline=False)
-    status = "Ativa" if datetime.utcnow() < p["hora_final"] else "Expirada"
     embed.add_field(name="Status", value=status, inline=False)
     if p["provas_link"]:
         embed.add_field(name="Provas (Link)", value=p["provas_link"], inline=False)
@@ -176,7 +182,7 @@ async def monitorar_punicoes():
                 try:
                     msg = await canal.fetch_message(punicao["mensagem_id"])
                     embed = msg.embeds[0]
-                    embed.color = discord.Color.green()
+                    embed.color = discord.Color.orange()
                     embed.title += " (Expirada)"
                     await msg.edit(embed=embed)
                     punicoes_ativas.remove(punicao)
