@@ -4,7 +4,7 @@ from discord.ext import commands, tasks
 from discord import app_commands
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-
+import asyncio
 load_dotenv()
 
 TOKEN = os.getenv("A")
