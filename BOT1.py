@@ -1,8 +1,9 @@
-    import os
+import os
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord import app_commands
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -17,17 +18,19 @@ bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 tree = bot.tree
 guild = discord.Object(id=GUILD_ID)
 
+punicoes_ativas = []
+
 def get_text_channel_by_name(guild_obj: discord.Guild, name: str):
     return discord.utils.get(guild_obj.text_channels, name=name)
 
 async def try_send(channel: discord.TextChannel, content=None, embed=None, file=None):
     try:
-        await channel.send(content=content, embed=embed, file=file)
-        return True, None
+        msg = await channel.send(content=content, embed=embed, file=file)
+        return True, msg, None
     except discord.Forbidden:
-        return False, "Sem permissão para enviar mensagens neste canal."
+        return False, None, "Sem permissão para enviar mensagens neste canal."
     except discord.HTTPException as e:
-        return False, f"Erro ao enviar mensagem: {e}"
+        return False, None, f"Erro ao enviar mensagem: {e}"
 
 @tree.command(name="ping", description="Mostra o ping do bot", guild=guild)
 async def ping(interaction: discord.Interaction):
@@ -44,7 +47,6 @@ async def postar_edital(interaction: discord.Interaction, link: str):
     texto = (
         "📢 **NOVO EDITAL ABERTO**\n\n"
         "O Rio Roleplay acaba de abrir seu novo formulário para a equipe de administração. "
-        "As vagas agora são ilimitadas e o processo de seleção foi reformulado.\n\n"
         "**Regras:**\n"
         "1️⃣ Solicitar o resultado acarretará na anulação do formulário.\n"
         "2️⃣ O uso de Inteligência Artificial resultará em desclassificação imediata.\n"
@@ -53,7 +55,7 @@ async def postar_edital(interaction: discord.Interaction, link: str):
         f"📎 **Formulário:** {link}\n\n"
         "Boa sorte a todos! 🍀"
     )
-    success, err = await try_send(canal, texto)
+    success, msg, err = await try_send(canal, texto)
     if success:
         await interaction.followup.send("✅ Edital postado com sucesso!", ephemeral=True)
     else:
@@ -82,34 +84,26 @@ async def resultado(interaction: discord.Interaction, aprovados: str, data: str)
     tempo="Tempo da punição em minutos",
     provas="Link ou arquivo de prova"
 )
-async def registro(
-    interaction: discord.Interaction,
-    player: str,
-    staff: str,
-    motivo: str,
-    tempo: int,
-    provas: str = None
-):
+async def registro(interaction: discord.Interaction, player: str, staff: str, motivo: str, tempo: int, provas: str = None):
     await interaction.response.defer(ephemeral=True)
     canal = get_text_channel_by_name(interaction.guild, "punições")
     if not canal:
         await interaction.followup.send("❌ Canal 'punições' não encontrado.", ephemeral=True)
         return
-
     embed = discord.Embed(title="📋 Punição Aplicada", color=discord.Color.red())
     embed.add_field(name="Player", value=player, inline=False)
     embed.add_field(name="Responsável", value=staff, inline=False)
     embed.add_field(name="Motivo", value=motivo, inline=False)
     embed.add_field(name="Tempo", value=f"{tempo} minutos", inline=False)
-
     file = None
     if provas and provas.startswith("http"):
         embed.add_field(name="Provas", value=provas, inline=False)
     elif interaction.attachments:
         file = await interaction.attachments[0].to_file()
-
-    success, err = await try_send(canal, embed=embed, file=file)
+    success, msg, err = await try_send(canal, embed=embed, file=file)
     if success:
+        hora_final = datetime.utcnow() + timedelta(minutes=tempo)
+        punicoes_ativas.append({"player": player, "canal_id": canal.id, "mensagem_id": msg.id, "hora_final": hora_final})
         await interaction.followup.send("✅ Registro enviado!", ephemeral=True)
     else:
         await interaction.followup.send(f"❌ Erro ao enviar registro: {err}", ephemeral=True)
@@ -121,7 +115,7 @@ async def anular(interaction: discord.Interaction):
     if not canal:
         await interaction.followup.send("❌ Canal 'punições' não encontrado.", ephemeral=True)
         return
-    success, err = await try_send(canal, "⚠️ Uma punição foi anulada.")
+    success, msg, err = await try_send(canal, "⚠️ Uma punição foi anulada.")
     if success:
         await interaction.followup.send("✅ Anulação enviada!", ephemeral=True)
     else:
@@ -136,4 +130,34 @@ async def conferir(interaction: discord.Interaction, nick: str, staff: str = Non
     embed.add_field(name="Status", value="Punição registrada", inline=False)
     if staff:
         embed.add_field(name="Staff Responsável", value=staff, inline=False)
-    await interaction.followup.
+    await interaction.followup.send(embed=embed)
+
+async def monitorar_punicoes():
+    await bot.wait_until_ready()
+    while not bot.is_closed():
+        now = datetime.utcnow()
+        for punicao in punicoes_ativas[:]:
+            if now >= punicao["hora_final"]:
+                canal = bot.get_channel(punicao["canal_id"])
+                try:
+                    msg = await canal.fetch_message(punicao["mensagem_id"])
+                    embed = msg.embeds[0]
+                    embed.color = discord.Color.green()
+                    embed.title += " (Expirada)"
+                    await msg.edit(embed=embed)
+                    punicoes_ativas.remove(punicao)
+                except:
+                    punicoes_ativas.remove(punicao)
+        await asyncio.sleep(60)
+
+@bot.event
+async def on_ready():
+    guild_obj = bot.get_guild(GUILD_ID)
+    if guild_obj:
+        await bot.tree.sync(guild=guild_obj)
+    else:
+        await bot.tree.sync()
+    bot.loop.create_task(monitorar_punicoes())
+    print(f"✅ Bot conectado como {bot.user}")
+
+bot.run(TOKEN)
