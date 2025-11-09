@@ -1,31 +1,69 @@
+import os
+import logging
 import discord
 from discord.ext import commands
 from discord import app_commands
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("BOT1")
+
 TOKEN = os.getenv("A")
-GUILD_ID = int(os.getenv("GUILD_ID"))
+GUILD_ID_STR = os.getenv("GUILD_ID")
+
+if not TOKEN:
+    logger.critical("Token do Discord não definido na variável de ambiente 'A'. Encerrando.")
+    raise SystemExit("Variável de ambiente ausente: A (token)")
+
+if not GUILD_ID_STR:
+    logger.critical("Guild ID não definido na variável de ambiente 'GUILD_ID'. Encerrando.")
+    raise SystemExit("Variável de ambiente ausente: GUILD_ID")
+
+try:
+    GUILD_ID = int(GUILD_ID_STR)
+except ValueError:
+    logger.critical("GUILD_ID não é um inteiro válido: %r", GUILD_ID_STR)
+    raise SystemExit("GUILD_ID deve ser um número inteiro")
 
 intents = discord.Intents.default()
 intents.guilds = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+
+bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 tree = bot.tree
 guild = discord.Object(id=GUILD_ID)
 
+
+def get_text_channel_by_name(guild_obj: discord.Guild, name: str) -> discord.TextChannel | None:
+    return discord.utils.get(guild_obj.text_channels, name=name)
+
+
+async def try_send(channel: discord.TextChannel, content: str):
+    try:
+        await channel.send(content)
+        return True, None
+    except discord.Forbidden:
+        return False, "O bot não tem permissão para enviar mensagens neste canal."
+    except discord.HTTPException as e:
+        return False, f"Falha ao enviar mensagem: {e}"
+
+
 @tree.command(name="ping", description="Mostra o ping do bot", guild=guild)
 async def ping(interaction: discord.Interaction):
-    await interaction.response.send_message(f"Pong! 🏓 {round(bot.latency * 1000)}ms")
+    latency_ms = round(bot.latency * 1000)
+    await interaction.response.send_message(f"Pong! 🏓 {latency_ms}ms", ephemeral=True)
+
 
 @tree.command(name="postar_edital", description="Posta o edital com o link do formulário", guild=guild)
 @app_commands.describe(link="Link do formulário")
 async def postar_edital(interaction: discord.Interaction, link: str):
-    canal = discord.utils.get(interaction.guild.text_channels, name="edital-staff")
+    await interaction.response.defer(ephemeral=True)
+    canal = get_text_channel_by_name(interaction.guild, "edital-staff")
     if not canal:
-        await interaction.response.send_message("❌ Canal 'edital-staff' não encontrado.", ephemeral=True)
+        await interaction.followup.send("❌ Canal 'edital-staff' não encontrado.", ephemeral=True)
         return
+
     texto = (
         "📢 **NOVO EDITAL ABERTO**\n\n"
         "O Rio Roleplay acaba de abrir seu novo formulário para a equipe de administração. "
@@ -40,40 +78,70 @@ async def postar_edital(interaction: discord.Interaction, link: str):
         f"📎 **Formulário:** {link}\n\n"
         "Boa sorte a todos! 🍀"
     )
-    await canal.send(texto)
-    await interaction.response.send_message("✅ Edital postado com sucesso!", ephemeral=True)
+
+    success, err = await try_send(canal, texto)
+    if success:
+        await interaction.followup.send("✅ Edital postado com sucesso!", ephemeral=True)
+    else:
+        logger.error("Falha ao postar edital: %s", err)
+        await interaction.followup.send(f"❌ Não foi possível postar o edital: {err}", ephemeral=True)
+
 
 @tree.command(name="resultado", description="Envia o resultado no canal edital-staff", guild=guild)
 async def resultado(interaction: discord.Interaction):
-    canal = discord.utils.get(interaction.guild.text_channels, name="edital-staff")
+    await interaction.response.defer(ephemeral=True)
+    canal = get_text_channel_by_name(interaction.guild, "edital-staff")
     if canal:
-        await canal.send("📢 **O resultado do processo seletivo foi publicado!**")
-        await interaction.response.send_message("✅ Resultado enviado!", ephemeral=True)
+        success, err = await try_send(canal, "📢 **O resultado do processo seletivo foi publicado!**")
+        if success:
+            await interaction.followup.send("✅ Resultado enviado!", ephemeral=True)
+        else:
+            logger.error("Falha ao enviar resultado: %s", err)
+            await interaction.followup.send(f"❌ Não foi possível enviar o resultado: {err}", ephemeral=True)
     else:
-        await interaction.response.send_message("❌ Canal 'edital-staff' não encontrado.", ephemeral=True)
+        await interaction.followup.send("❌ Canal 'edital-staff' não encontrado.", ephemeral=True)
+
 
 @tree.command(name="registro", description="Envia um registro no canal punições", guild=guild)
 async def registro(interaction: discord.Interaction):
-    canal = discord.utils.get(interaction.guild.text_channels, name="punições")
+    await interaction.response.defer(ephemeral=True)
+    canal = get_text_channel_by_name(interaction.guild, "punições")
     if canal:
-        await canal.send("📋 Novo registro adicionado ao sistema de punições.")
-        await interaction.response.send_message("✅ Registro enviado!", ephemeral=True)
+        success, err = await try_send(canal, "📋 Novo registro adicionado ao sistema de punições.")
+        if success:
+            await interaction.followup.send("✅ Registro enviado!", ephemeral=True)
+        else:
+            logger.error("Falha ao enviar registro: %s", err)
+            await interaction.followup.send(f"❌ Não foi possível enviar o registro: {err}", ephemeral=True)
     else:
-        await interaction.response.send_message("❌ Canal 'punições' não encontrado.", ephemeral=True)
+        await interaction.followup.send("❌ Canal 'punições' não encontrado.", ephemeral=True)
+
 
 @tree.command(name="anular", description="Envia uma anulação no canal punições", guild=guild)
 async def anular(interaction: discord.Interaction):
-    canal = discord.utils.get(interaction.guild.text_channels, name="punições")
+    await interaction.response.defer(ephemeral=True)
+    canal = get_text_channel_by_name(interaction.guild, "punições")
     if canal:
-        await canal.send("⚠️ Uma punição foi anulada.")
-        await interaction.response.send_message("✅ Anulação enviada!", ephemeral=True)
+        success, err = await try_send(canal, "⚠️ Uma punição foi anulada.")
+        if success:
+            await interaction.followup.send("✅ Anulação enviada!", ephemeral=True)
+        else:
+            logger.error("Falha ao enviar anulação: %s", err)
+            await interaction.followup.send(f"❌ Não foi possível enviar a anulação: {err}", ephemeral=True)
     else:
-        await interaction.response.send_message("❌ Canal 'punições' não encontrado.", ephemeral=True)
+        await interaction.followup.send("❌ Canal 'punições' não encontrado.", ephemeral=True)
+
 
 @bot.event
 async def on_ready():
-    synced = await tree.sync(guild=guild)
-    print(f"✅ {len(synced)} comandos sincronizados na guild {GUILD_ID}")
-    print(f"Bot conectado como {bot.user}")
+    try:
+        synced = await tree.sync(guild=guild)
+        logger.info("✅ %d comandos sincronizados na guild %s", len(synced), GUILD_ID)
+    except Exception as e:
+        logger.exception("Falha ao sincronizar comandos de aplicação: %s", e)
 
-bot.run(TOKEN)
+    logger.info("Bot conectado como %s", bot.user)
+
+
+if __name__ == "__main__":
+    bot.run(TOKEN)
