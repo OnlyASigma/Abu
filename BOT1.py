@@ -119,6 +119,11 @@ async def registro(
         hora_final = datetime.utcnow() + timedelta(minutes=tempo)
         punicoes_ativas.append({
             "player": player,
+            "staff": staff,
+            "motivo": motivo,
+            "tempo": tempo,
+            "provas_link": provas_link,
+            "provas_file": file,
             "canal_id": canal.id,
             "mensagem_id": msg.id,
             "hora_final": hora_final
@@ -141,14 +146,24 @@ async def anular(interaction: discord.Interaction):
         await interaction.followup.send(f"❌ Erro ao enviar anulação: {err}", ephemeral=True)
 
 @tree.command(name="conferir", description="Conferir punição de um player", guild=guild)
-@app_commands.describe(nick="Nick do player punido", staff="Staff responsável pela punição")
-async def conferir(interaction: discord.Interaction, nick: str, staff: str = None):
+@app_commands.describe(player="Nick do player punido")
+async def conferir(interaction: discord.Interaction, player: str):
     await interaction.response.defer(ephemeral=True)
+    p = next((p for p in punicoes_ativas if p["player"] == player), None)
+    if not p:
+        await interaction.followup.send("❌ Nenhuma punição encontrada para este player.", ephemeral=True)
+        return
     embed = discord.Embed(title="Consulta de Punição", color=discord.Color.orange())
-    embed.add_field(name="Nick do Player", value=nick, inline=False)
-    embed.add_field(name="Status", value="Punição registrada", inline=False)
-    if staff:
-        embed.add_field(name="Staff Responsável", value=staff, inline=False)
+    embed.add_field(name="Player", value=p["player"], inline=False)
+    embed.add_field(name="Responsável", value=p["staff"], inline=False)
+    embed.add_field(name="Motivo", value=p["motivo"], inline=False)
+    embed.add_field(name="Tempo", value=f"{p['tempo']} minutos", inline=False)
+    status = "Ativa" if datetime.utcnow() < p["hora_final"] else "Expirada"
+    embed.add_field(name="Status", value=status, inline=False)
+    if p["provas_link"]:
+        embed.add_field(name="Provas (Link)", value=p["provas_link"], inline=False)
+    if p["provas_file"]:
+        embed.add_field(name="Provas (Arquivo enviado)", value=p["provas_file"].filename, inline=False)
     await interaction.followup.send(embed=embed)
 
 async def monitorar_punicoes():
