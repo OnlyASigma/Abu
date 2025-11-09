@@ -20,9 +20,9 @@ guild = discord.Object(id=GUILD_ID)
 def get_text_channel_by_name(guild_obj: discord.Guild, name: str):
     return discord.utils.get(guild_obj.text_channels, name=name)
 
-async def try_send(channel: discord.TextChannel, content: str):
+async def try_send(channel: discord.TextChannel, content=None, embed=None, file=None):
     try:
-        await channel.send(content)
+        await channel.send(content=content, embed=embed, file=file)
         return True, None
     except discord.Forbidden:
         return False, "Sem permissão para enviar mensagens neste canal."
@@ -83,21 +83,48 @@ async def resultado(interaction: discord.Interaction, aprovados: str, data: str)
     except:
         pass
 
-@tree.command(name="registro", description="Envia um registro no canal punições", guild=guild)
-async def registro(interaction: discord.Interaction):
+@tree.command(name="registro", description="Cria um registro de punição", guild=guild)
+@app_commands.describe(
+    player="Nick do player punido",
+    staff="Staff responsável pela punição",
+    motivo="Motivo da punição",
+    tempo="Tempo da punição em minutos",
+    provas="Link ou arquivo de prova"
+)
+async def registro(
+    interaction: discord.Interaction,
+    player: str,
+    staff: str,
+    motivo: str,
+    tempo: int,
+    provas: str = None
+):
     try:
         await interaction.response.defer(ephemeral=True)
         canal = get_text_channel_by_name(interaction.guild, "punições")
         if not canal:
             await interaction.followup.send("❌ Canal 'punições' não encontrado.", ephemeral=True)
             return
-        success, err = await try_send(canal, "📋 Novo registro adicionado ao sistema de punições.")
+
+        embed = discord.Embed(title="📋 Nova Punição", color=discord.Color.red())
+        embed.add_field(name="Player", value=player, inline=False)
+        embed.add_field(name="Responsável", value=staff, inline=False)
+        embed.add_field(name="Motivo", value=motivo, inline=False)
+        embed.add_field(name="Tempo", value=f"{tempo} minutos", inline=False)
+
+        file = None
+        if provas and provas.startswith("http"):
+            embed.add_field(name="Provas", value=provas, inline=False)
+        elif interaction.attachments:
+            file = await interaction.attachments[0].to_file()
+
+        success, err = await try_send(canal, embed=embed, file=file)
         if success:
             await interaction.followup.send("✅ Registro enviado!", ephemeral=True)
         else:
             await interaction.followup.send(f"❌ Erro ao enviar registro: {err}", ephemeral=True)
-    except:
-        pass
+    except Exception as e:
+        await interaction.followup.send(f"❌ Ocorreu um erro: {e}", ephemeral=True)
 
 @tree.command(name="anular", description="Envia uma anulação no canal punições", guild=guild)
 async def anular(interaction: discord.Interaction):
