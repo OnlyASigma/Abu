@@ -31,95 +31,114 @@ async def try_send(channel: discord.TextChannel, content: str):
 
 @tree.command(name="ping", description="Mostra o ping do bot", guild=guild)
 async def ping(interaction: discord.Interaction):
-    await interaction.response.send_message(f"Pong! 🏓 {round(bot.latency * 1000)}ms", ephemeral=True)
+    try:
+        await interaction.response.send_message(f"Pong! 🏓 {round(bot.latency * 1000)}ms", ephemeral=True)
+    except:
+        pass
 
 @tree.command(name="postar_edital", description="Posta o edital com o link do formulário", guild=guild)
 @app_commands.describe(link="Link do formulário")
 async def postar_edital(interaction: discord.Interaction, link: str):
-    await interaction.response.defer(ephemeral=True)
-    canal = get_text_channel_by_name(interaction.guild, "edital-staff")
-    if not canal:
-        await interaction.followup.send("❌ Canal 'edital-staff' não encontrado.", ephemeral=True)
-        return
-    texto = (
-        "📢 **NOVO EDITAL ABERTO**\n\n"
-        "O Rio Roleplay acaba de abrir seu novo formulário para a equipe de administração. "
-        "As vagas agora são ilimitadas e o processo de seleção foi reformulado, tornando-se mais criterioso, "
-        "profissional e original. Cada candidato será avaliado com atenção, considerando o perfil geral, "
-        "conhecimento técnico, aplicação das regras, ética, postura e capacidade de análise.\n\n"
-        "**Regras:**\n"
-        "1️⃣ Solicitar o resultado acarretará na anulação do formulário.\n"
-        "2️⃣ O uso de Inteligência Artificial resultará em desclassificação imediata.\n"
-        "3️⃣ Resultados serão divulgados após o encerramento das inscrições.\n"
-        "4️⃣ Utilize apenas suas próprias palavras; respostas copiadas não serão aceitas.\n\n"
-        f"📎 **Formulário:** {link}\n\n"
-        "Boa sorte a todos! 🍀"
-    )
-    success, err = await try_send(canal, texto)
-    if success:
-        await interaction.followup.send("✅ Edital postado com sucesso!", ephemeral=True)
-    else:
-        await interaction.followup.send(f"❌ Falha ao postar o edital: {err}", ephemeral=True)
+    try:
+        await interaction.response.defer(ephemeral=True)
+        canal = get_text_channel_by_name(interaction.guild, "edital-staff")
+        if not canal:
+            await interaction.followup.send("❌ Canal 'edital-staff' não encontrado.", ephemeral=True)
+            return
+        texto = (
+            "📢 **NOVO EDITAL ABERTO**\n\n"
+            "O Rio Roleplay acaba de abrir seu novo formulário para a equipe de administração. "
+            "As vagas agora são ilimitadas e o processo de seleção foi reformulado.\n\n"
+            "**Regras:**\n"
+            "1️⃣ Solicitar o resultado acarretará na anulação do formulário.\n"
+            "2️⃣ O uso de Inteligência Artificial resultará em desclassificação imediata.\n"
+            "3️⃣ Resultados serão divulgados após o encerramento das inscrições.\n"
+            "4️⃣ Utilize apenas suas próprias palavras; respostas copiadas não serão aceitas.\n\n"
+            f"📎 **Formulário:** {link}\n\n"
+            "Boa sorte a todos! 🍀"
+        )
+        success, err = await try_send(canal, texto)
+        if success:
+            await interaction.followup.send("✅ Edital postado com sucesso!", ephemeral=True)
+        else:
+            await interaction.followup.send(f"❌ Falha ao postar o edital: {err}", ephemeral=True)
+    except:
+        pass
 
 @tree.command(name="resultado", description="Posta o resultado do edital", guild=guild)
 @app_commands.describe(aprovados="IDs dos aprovados separados por espaço", data="Data de lançamento")
 async def resultado(interaction: discord.Interaction, aprovados: str, data: str):
-    await interaction.response.defer(ephemeral=True)
-    canal = get_text_channel_by_name(interaction.guild, "edital-staff")
-    if not canal:
-        await interaction.followup.send("❌ Canal 'edital-staff' não encontrado.", ephemeral=True)
-        return
-    ids = aprovados.split()
-    mentions = "\n".join([f"<@{id_}> (ID: {id_})" for id_ in ids])
-    embed = discord.Embed(title=f"📢 Resultado do Processo Seletivo — {data}", color=discord.Color.blue())
-    embed.add_field(name="Aprovados", value=mentions if mentions else "Nenhum aprovado", inline=False)
-    await canal.send(embed=embed)
-    await interaction.followup.send("✅ Resultado enviado!", ephemeral=True)
+    try:
+        await interaction.response.defer(ephemeral=True)
+        canal = get_text_channel_by_name(interaction.guild, "edital-staff")
+        if not canal:
+            await interaction.followup.send("❌ Canal 'edital-staff' não encontrado.", ephemeral=True)
+            return
+        ids = aprovados.split()
+        mentions = "\n".join([f"<@{id_}> (ID: {id_})" for id_ in ids])
+        embed = discord.Embed(title=f"📢 Resultado do Processo Seletivo — {data}", color=discord.Color.blue())
+        embed.add_field(name="Aprovados", value=mentions if mentions else "Nenhum aprovado", inline=False)
+        await canal.send(embed=embed)
+        await interaction.followup.send("✅ Resultado enviado!", ephemeral=True)
+    except:
+        pass
 
 @tree.command(name="registro", description="Envia um registro no canal punições", guild=guild)
 async def registro(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    canal = get_text_channel_by_name(interaction.guild, "punições")
-    if not canal:
-        await interaction.followup.send("❌ Canal 'punições' não encontrado.", ephemeral=True)
-        return
-    success, err = await try_send(canal, "📋 Novo registro adicionado ao sistema de punições.")
-    if success:
-        await interaction.followup.send("✅ Registro enviado!", ephemeral=True)
-    else:
-        await interaction.followup.send(f"❌ Erro ao enviar registro: {err}", ephemeral=True)
+    try:
+        await interaction.response.defer(ephemeral=True)
+        canal = get_text_channel_by_name(interaction.guild, "punições")
+        if not canal:
+            await interaction.followup.send("❌ Canal 'punições' não encontrado.", ephemeral=True)
+            return
+        success, err = await try_send(canal, "📋 Novo registro adicionado ao sistema de punições.")
+        if success:
+            await interaction.followup.send("✅ Registro enviado!", ephemeral=True)
+        else:
+            await interaction.followup.send(f"❌ Erro ao enviar registro: {err}", ephemeral=True)
+    except:
+        pass
 
 @tree.command(name="anular", description="Envia uma anulação no canal punições", guild=guild)
 async def anular(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    canal = get_text_channel_by_name(interaction.guild, "punições")
-    if not canal:
-        await interaction.followup.send("❌ Canal 'punições' não encontrado.", ephemeral=True)
-        return
-    success, err = await try_send(canal, "⚠️ Uma punição foi anulada.")
-    if success:
-        await interaction.followup.send("✅ Anulação enviada!", ephemeral=True)
-    else:
-        await interaction.followup.send(f"❌ Erro ao enviar anulação: {err}", ephemeral=True)
+    try:
+        await interaction.response.defer(ephemeral=True)
+        canal = get_text_channel_by_name(interaction.guild, "punições")
+        if not canal:
+            await interaction.followup.send("❌ Canal 'punições' não encontrado.", ephemeral=True)
+            return
+        success, err = await try_send(canal, "⚠️ Uma punição foi anulada.")
+        if success:
+            await interaction.followup.send("✅ Anulação enviada!", ephemeral=True)
+        else:
+            await interaction.followup.send(f"❌ Erro ao enviar anulação: {err}", ephemeral=True)
+    except:
+        pass
 
 @tree.command(name="conferir", description="Conferir punição de um player", guild=guild)
 @app_commands.describe(nick="Nick do player punido", staff="Staff responsável pela punição")
 async def conferir(interaction: discord.Interaction, nick: str, staff: str = None):
-    await interaction.response.defer(ephemeral=True)
-    embed = discord.Embed(title="Consulta de Punição", color=discord.Color.orange())
-    embed.add_field(name="Nick do Player", value=nick, inline=False)
-    embed.add_field(name="Status", value="Punição registrada", inline=False)
-    if staff:
-        embed.add_field(name="Staff Responsável", value=staff, inline=False)
-    await interaction.followup.send(embed=embed)
+    try:
+        await interaction.response.defer(ephemeral=True)
+        embed = discord.Embed(title="Consulta de Punição", color=discord.Color.orange())
+        embed.add_field(name="Nick do Player", value=nick, inline=False)
+        embed.add_field(name="Status", value="Punição registrada", inline=False)
+        if staff:
+            embed.add_field(name="Staff Responsável", value=staff, inline=False)
+        await interaction.followup.send(embed=embed)
+    except:
+        pass
 
 @bot.event
 async def on_ready():
-    guild_obj = bot.get_guild(GUILD_ID)
-    if guild_obj:
-        await bot.tree.sync(guild=guild_obj)
-    else:
-        await bot.tree.sync()
-    print(f"✅ Bot conectado como {bot.user}")
+    try:
+        guild_obj = bot.get_guild(GUILD_ID)
+        if guild_obj:
+            await bot.tree.sync(guild=guild_obj)
+        else:
+            await bot.tree.sync()
+        print(f"✅ Bot conectado como {bot.user}")
+    except:
+        pass
 
 bot.run(TOKEN)
