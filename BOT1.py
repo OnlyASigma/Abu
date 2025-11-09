@@ -1,5 +1,4 @@
 import os
-import logging
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -7,25 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("BOT1")
-
 TOKEN = os.getenv("A")
-GUILD_ID_STR = os.getenv("GUILD_ID")
-
-if not TOKEN:
-    logger.critical("Token do Discord não definido na variável de ambiente 'A'. Encerrando.")
-    raise SystemExit("Variável de ambiente ausente: A (token)")
-
-if not GUILD_ID_STR:
-    logger.critical("Guild ID não definido na variável de ambiente 'GUILD_ID'. Encerrando.")
-    raise SystemExit("Variável de ambiente ausente: GUILD_ID")
-
-try:
-    GUILD_ID = int(GUILD_ID_STR)
-except ValueError:
-    logger.critical("GUILD_ID não é um inteiro válido: %r", GUILD_ID_STR)
-    raise SystemExit("GUILD_ID deve ser um número inteiro")
+GUILD_ID = int(os.getenv("GUILD_ID"))
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -83,7 +65,6 @@ async def postar_edital(interaction: discord.Interaction, link: str):
     if success:
         await interaction.followup.send("✅ Edital postado com sucesso!", ephemeral=True)
     else:
-        logger.error("Falha ao postar edital: %s", err)
         await interaction.followup.send(f"❌ Não foi possível postar o edital: {err}", ephemeral=True)
 
 
@@ -96,7 +77,6 @@ async def resultado(interaction: discord.Interaction):
         if success:
             await interaction.followup.send("✅ Resultado enviado!", ephemeral=True)
         else:
-            logger.error("Falha ao enviar resultado: %s", err)
             await interaction.followup.send(f"❌ Não foi possível enviar o resultado: {err}", ephemeral=True)
     else:
         await interaction.followup.send("❌ Canal 'edital-staff' não encontrado.", ephemeral=True)
@@ -111,7 +91,6 @@ async def registro(interaction: discord.Interaction):
         if success:
             await interaction.followup.send("✅ Registro enviado!", ephemeral=True)
         else:
-            logger.error("Falha ao enviar registro: %s", err)
             await interaction.followup.send(f"❌ Não foi possível enviar o registro: {err}", ephemeral=True)
     else:
         await interaction.followup.send("❌ Canal 'punições' não encontrado.", ephemeral=True)
@@ -126,7 +105,6 @@ async def anular(interaction: discord.Interaction):
         if success:
             await interaction.followup.send("✅ Anulação enviada!", ephemeral=True)
         else:
-            logger.error("Falha ao enviar anulação: %s", err)
             await interaction.followup.send(f"❌ Não foi possível enviar a anulação: {err}", ephemeral=True)
     else:
         await interaction.followup.send("❌ Canal 'punições' não encontrado.", ephemeral=True)
@@ -134,13 +112,8 @@ async def anular(interaction: discord.Interaction):
 
 @bot.event
 async def on_ready():
-    try:
-        synced = await tree.sync(guild=guild)
-        logger.info("✅ %d comandos sincronizados na guild %s", len(synced), GUILD_ID)
-    except Exception as e:
-        logger.exception("Falha ao sincronizar comandos de aplicação: %s", e)
-
-    logger.info("Bot conectado como %s", bot.user)
+    await bot.tree.clear_commands(guild=guild)
+    await bot.tree.sync(guild=guild)
 
 
 if __name__ == "__main__":
